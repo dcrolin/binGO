@@ -3,24 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>散步賓果 Prototype</title>
+    <title>散步賓果 - 拍照功能版</title>
     <style>
         :root { --primary: #333; --active: #ffdf00; }
         body { font-family: sans-serif; text-align: center; background: #f4f4f4; padding: 20px; }
-        /* 賓果外框 */
+        
         .bingo-board {
             display: grid;
-            grid-template-columns: repeat(4, 1fr); /* 這裡可以改格數 */
+            grid-template-columns: repeat(4, 1fr);
             gap: 10px;
             max-width: 400px;
             margin: 20px auto;
         }
-        /* 格子樣式 */
+        
         .cell {
             aspect-ratio: 1;
             background: white;
             border: 2px solid var(--primary);
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
             font-size: 14px;
@@ -28,15 +29,41 @@
             position: relative;
             padding: 5px;
             transition: 0.3s;
+            /* 讓照片填滿格子，並加上一點半透明黑色遮罩讓字看得清楚 */
+            background-size: cover;
+            background-position: center;
         }
-        .cell.active { background: var(--active); font-weight: bold; }
-        .cell.active::after {
-            content: '⭕';
-            position: absolute;
-            font-size: 40px;
-            opacity: 0.5;
+        
+        /* 標記為找到的樣式 */
+        .cell.active { 
+            background-color: var(--active); 
+            font-weight: bold; 
         }
+        
+        /* 當格子有照片時，讓文字變成白色並加上陰影 */
+        .cell.has-photo {
+            color: white;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.8);
+            border-color: #fff;
+        }
+
         .free-space { background: #eee; font-style: italic; }
+        
+        /* 拍照按鈕 */
+        .cam-btn {
+            margin-top: 8px;
+            font-size: 20px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 5px;
+            z-index: 2;
+            background-color: rgba(255,255,255,0.7);
+            border-radius: 5px;
+        }
+        .cell.has-photo .cam-btn {
+            background-color: rgba(0,0,0,0.5); /* 有照片時按鈕變暗色 */
+        }
     </style>
 </head>
 <body>
@@ -48,40 +75,80 @@
         <!-- 格子會由 JS 產生 -->
     </div>
 
-    <button onclick="resetBoard()">重新洗牌</button>
+    <button onclick="resetBoard()" style="padding: 10px 20px; margin-top: 10px;">重新洗牌</button>
+
+    <!-- 隱藏的相機呼叫器 (capture="environment" 代表預設開啟後置鏡頭) -->
+    <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display: none;">
 
     <script>
+        // 你可以隨時在這裡增加新的物件
         const items = ["郵筒", "貓", "狗", "沒戴安全帽阿伯", "外送員", "變電箱", "紅線違停", "建案廣告", "大榕樹", "垃圾車", "土地公廟", "飲料店", "這格算送你", "鐵捲門", "三角錐", "小發財車"];
+
+        let currentCell = null; // 用來記住現在是哪個格子準備要拍照
+        const cameraInput = document.getElementById('cameraInput');
+
+        // 當相機拍完照，或者選好圖片後的處理邏輯
+        cameraInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file && currentCell) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    // 把拍到的照片設為該格子的背景
+                    currentCell.style.backgroundImage = `linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.3)), url(${event.target.result})`;
+                    currentCell.classList.add('has-photo');
+                    currentCell.classList.add('active'); // 拍照等於自動打勾
+                };
+                reader.readAsDataURL(file); // 讀取圖片檔案
+            }
+            // 清空 input，確保下次點擊還能觸發
+            cameraInput.value = ''; 
+        });
 
         function createBoard(size = 4) {
             const board = document.getElementById('board');
             board.innerHTML = '';
-            board.style.gridTemplateColumns = `repeat(${size}, 1fr)`;
-
-            // 隨機排序
+            
             const shuffled = items.sort(() => 0.5 - Math.random());
 
             for (let i = 0; i < size * size; i++) {
                 const cell = document.createElement('div');
                 cell.className = 'cell';
                 
-                // 設定中間格為 Free Space
                 if (i === Math.floor((size * size) / 2)) {
-                    cell.innerText = "⭐ 免費格";
+                    cell.innerHTML = "<span>⭐ 免費格</span>";
                     cell.classList.add('free-space', 'active');
                 } else {
-                    cell.innerText = shuffled[i % items.length];
-                    cell.onclick = function() {
-                        this.classList.toggle('active');
-                        checkWin(); // 這裡可以寫判斷連線的邏輯
+                    // 建立文字標籤
+                    const textSpan = document.createElement('span');
+                    textSpan.innerText = shuffled[i % items.length];
+                    textSpan.style.zIndex = "1";
+                    
+                    // 建立拍照按鈕
+                    const camBtn = document.createElement('button');
+                    camBtn.className = 'cam-btn';
+                    camBtn.innerText = '📷';
+                    
+                    // 點擊文字：切換黃色打勾狀態
+                    textSpan.onclick = function(event) {
+                        event.stopPropagation(); // 防止點擊事件擴散
+                        cell.classList.toggle('active');
                     };
+
+                    // 點擊拍照按鈕：呼叫隱藏的相機
+                    camBtn.onclick = function(event) {
+                        event.stopPropagation();
+                        currentCell = cell; // 記住現在是點了哪個格子
+                        cameraInput.click(); // 模擬點擊 input 開啟相機
+                    };
+
+                    cell.appendChild(textSpan);
+                    cell.appendChild(camBtn);
                 }
                 board.appendChild(cell);
             }
         }
 
         function resetBoard() { createBoard(4); }
-        function checkWin() { /* 連線邏輯實作區 */ }
 
         createBoard(4);
     </script>
