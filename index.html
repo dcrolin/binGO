@@ -80,77 +80,79 @@
     <!-- 隱藏的相機呼叫器 (capture="environment" 代表預設開啟後置鏡頭) -->
     <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display: none;">
 
-    <script>
-        // 你可以隨時在這裡增加新的物件
-        const items = ["郵筒", "貓", "狗", "沒戴安全帽阿伯", "外送員", "變電箱", "紅線違停", "建案廣告", "大榕樹", "垃圾車", "土地公廟", "飲料店", "這格算送你", "鐵捲門", "三角錐", "小發財車"];
+ <script>
+    // 1. 物件庫 (未來可以根據模式動態載入這組 Array)
+    const items = ["郵筒", "貓", "狗", "沒戴安全帽阿伯", "外送員", "變電箱", "紅線違停", "建案廣告", "大榕樹", "垃圾車", "土地公廟", "飲料店", "這格算送你", "鐵捲門", "三角錐", "小發財車"];
 
-        let currentCell = null; // 用來記住現在是哪個格子準備要拍照
-        const cameraInput = document.getElementById('cameraInput');
+    let currentCell = null; 
+    const cameraInput = document.getElementById('cameraInput');
 
-        // 當相機拍完照，或者選好圖片後的處理邏輯
-        cameraInput.addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (file && currentCell) {
-                const reader = new FileReader();
-                reader.onload = function(event) {
-                    // 把拍到的照片設為該格子的背景
-                    currentCell.style.backgroundImage = `linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.3)), url(${event.target.result})`;
-                    currentCell.classList.add('has-photo');
-                    currentCell.classList.add('active'); // 拍照等於自動打勾
-                };
-                reader.readAsDataURL(file); // 讀取圖片檔案
-            }
-            // 清空 input，確保下次點擊還能觸發
-            cameraInput.value = ''; 
-        });
-
-        function createBoard(size = 4) {
-            const board = document.getElementById('board');
-            board.innerHTML = '';
-            
-            const shuffled = items.sort(() => 0.5 - Math.random());
-
-            for (let i = 0; i < size * size; i++) {
-                const cell = document.createElement('div');
-                cell.className = 'cell';
-                
-                if (i === Math.floor((size * size) / 2)) {
-                    cell.innerHTML = "<span>⭐ 免費格</span>";
-                    cell.classList.add('free-space', 'active');
-                } else {
-                    // 建立文字標籤
-                    const textSpan = document.createElement('span');
-                    textSpan.innerText = shuffled[i % items.length];
-                    textSpan.style.zIndex = "1";
-                    
-                    // 建立拍照按鈕
-                    const camBtn = document.createElement('button');
-                    camBtn.className = 'cam-btn';
-                    camBtn.innerText = '📷';
-                    
-                    // 點擊文字：切換黃色打勾狀態
-                    textSpan.onclick = function(event) {
-                        event.stopPropagation(); // 防止點擊事件擴散
-                        cell.classList.toggle('active');
-                    };
-
-                    // 點擊拍照按鈕：呼叫隱藏的相機
-                    camBtn.onclick = function(event) {
-                        event.stopPropagation();
-                        currentCell = cell; // 記住現在是點了哪個格子
-                        cameraInput.click(); // 模擬點擊 input 開啟相機
-                    };
-
-                    cell.appendChild(textSpan);
-                    cell.appendChild(camBtn);
-                }
-                board.appendChild(cell);
-            }
+    // 2. 相機監聽器：拍完照後的處理
+    cameraInput.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file && currentCell) {
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                // 將照片設為背景，並加上深色遮罩確保文字清晰
+                currentCell.style.backgroundImage = `linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.3)), url(${event.target.result})`;
+                currentCell.classList.add('has-photo');
+                currentCell.classList.add('active'); // 拍照完自動標記完成
+            };
+            reader.readAsDataURL(file);
         }
+        cameraInput.value = ''; 
+    });
 
-        function resetBoard() { createBoard(4); }
+    // 3. 核心功能：產生賓果盤
+    function createBoard(size = 4) {
+        const board = document.getElementById('board');
+        board.innerHTML = '';
+        
+        // 隨機打亂物件
+        const shuffled = items.sort(() => 0.5 - Math.random());
 
-        createBoard(4);
-    </script>
+        for (let i = 0; i < size * size; i++) {
+            const cell = document.createElement('div');
+            cell.className = 'cell';
+            
+            // 中間格設定
+            if (i === Math.floor((size * size) / 2)) {
+                cell.innerHTML = "<span>⭐ 免費格</span>";
+                cell.classList.add('free-space', 'active');
+            } else {
+                // 建立文字標籤
+                const textSpan = document.createElement('span');
+                textSpan.innerText = shuffled[i % items.length];
+                textSpan.style.pointerEvents = "none"; // 讓點擊直接穿透文字到格子上
+                
+                // 建立拍照按鈕
+                const camBtn = document.createElement('button');
+                camBtn.className = 'cam-btn';
+                camBtn.innerText = '📷';
+                
+                // 點擊整個格子：切換完成狀態
+                cell.onclick = function() {
+                    this.classList.toggle('active');
+                };
+
+                // 點擊相機按鈕：開啟相機 (不觸發格子的 toggle)
+                camBtn.onclick = function(event) {
+                    event.stopPropagation(); // 阻止事件傳給 cell.onclick
+                    currentCell = cell; 
+                    cameraInput.click(); 
+                };
+
+                cell.appendChild(textSpan);
+                cell.appendChild(camBtn);
+            }
+            board.appendChild(cell);
+        }
+    }
+
+    function resetBoard() { createBoard(4); }
+
+    // 初始化 4*4 盤面
+    createBoard(4);
+</script>
 </body>
 </html>
