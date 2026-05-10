@@ -3,156 +3,182 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>散步賓果 - 拍照功能版</title>
+    <title>散步賓果 - 連線版</title>
     <style>
-        :root { --primary: #333; --active: #ffdf00; }
-        body { font-family: sans-serif; text-align: center; background: #f4f4f4; padding: 20px; }
+        :root { --primary: #333; --active: #ffdf00; --line: #ff4757; }
+        body { font-family: sans-serif; text-align: center; background: #f4f4f4; padding: 20px; margin: 0; }
         
+        .container { position: relative; max-width: 400px; margin: 20px auto; }
+
         .bingo-board {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
             gap: 10px;
-            max-width: 400px;
-            margin: 20px auto;
+            background: white;
+            padding: 10px;
+            border: 3px solid var(--primary);
+            position: relative;
+            z-index: 1;
         }
         
         .cell {
             aspect-ratio: 1;
-            background: white;
-            border: 2px solid var(--primary);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            font-size: 14px;
-            cursor: pointer;
-            position: relative;
-            padding: 5px;
-            transition: 0.3s;
-            /* 讓照片填滿格子，並加上一點半透明黑色遮罩讓字看得清楚 */
-            background-size: cover;
-            background-position: center;
+            background: #fff;
+            border: 1px solid #ddd;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            font-size: 14px; cursor: pointer; position: relative; overflow: hidden;
+            background-size: cover; background-position: center; transition: 0.3s;
         }
         
-        /* 標記為找到的樣式 */
-        .cell.active { 
-            background-color: var(--active); 
-            font-weight: bold; 
-        }
-        
-        /* 當格子有照片時，讓文字變成白色並加上陰影 */
-        .cell.has-photo {
-            color: white;
-            text-shadow: 1px 1px 3px rgba(0,0,0,0.8);
-            border-color: #fff;
+        .cell.active { background-color: var(--active); font-weight: bold; }
+        .cell.has-photo { color: white; text-shadow: 1px 1px 3px rgba(0,0,0,0.8); }
+
+        /* SVG 連線畫布：疊在格子上層 */
+        #line-canvas {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none; /* 讓線不要擋住點擊 */
+            z-index: 10;
         }
 
-        .free-space { background: #eee; font-style: italic; }
-        
-        /* 拍照按鈕 */
-        .cam-btn {
-            margin-top: 8px;
-            font-size: 20px;
-            background: none;
-            border: none;
-            cursor: pointer;
-            padding: 5px;
-            z-index: 2;
-            background-color: rgba(255,255,255,0.7);
-            border-radius: 5px;
+        .bingo-line {
+            stroke: var(--line);
+            stroke-width: 8;
+            stroke-linecap: round;
+            stroke-dasharray: 1000;
+            stroke-dashoffset: 1000;
+            animation: drawLine 0.5s ease forwards;
+            opacity: 0.7;
         }
-        .cell.has-photo .cam-btn {
-            background-color: rgba(0,0,0,0.5); /* 有照片時按鈕變暗色 */
-        }
+
+        @keyframes drawLine { to { stroke-dashoffset: 0; } }
+
+        .cam-btn { margin-top: 5px; font-size: 18px; background: rgba(255,255,255,0.8); border: none; border-radius: 4px; padding: 2px 5px; cursor: pointer; }
     </style>
 </head>
 <body>
 
     <h1>🚶‍♂️ 散步賓果</h1>
-    <p>模式：隨機城市</p>
-
-    <div class="bingo-board" id="board">
-        <!-- 格子會由 JS 產生 -->
+    <div class="container">
+        <div class="bingo-board" id="board"></div>
+        <!-- 用來畫連線的畫布 -->
+        <svg id="line-canvas"></svg>
     </div>
 
-    <button onclick="resetBoard()" style="padding: 10px 20px; margin-top: 10px;">重新洗牌</button>
-
-    <!-- 隱藏的相機呼叫器 (capture="environment" 代表預設開啟後置鏡頭) -->
+    <button onclick="resetBoard()" style="padding: 10px 20px;">重新洗牌</button>
     <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display: none;">
 
- <script>
-    // 1. 物件庫 (未來可以根據模式動態載入這組 Array)
-    const items = ["郵筒", "貓", "狗", "沒戴安全帽阿伯", "外送員", "變電箱", "紅線違停", "建案廣告", "大榕樹", "垃圾車", "土地公廟", "飲料店", "這格算送你", "鐵捲門", "三角錐", "小發財車"];
+    <script>
+        const items = ["郵筒", "貓", "狗", "沒戴安全帽阿伯", "外送員", "變電箱", "紅線違停", "建案廣告", "大榕樹", "垃圾車", "土地公廟", "飲料店", "免費格", "鐵捲門", "三角錐", "小發財車"];
+        let gridSize = 4;
+        let currentCell = null;
+        const cameraInput = document.getElementById('cameraInput');
 
-    let currentCell = null; 
-    const cameraInput = document.getElementById('cameraInput');
-
-    // 2. 相機監聽器：拍完照後的處理
-    cameraInput.addEventListener('change', function(e) {
-        const file = e.target.files[0];
-        if (file && currentCell) {
-            const reader = new FileReader();
-            reader.onload = function(event) {
-                // 將照片設為背景，並加上深色遮罩確保文字清晰
-                currentCell.style.backgroundImage = `linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.3)), url(${event.target.result})`;
-                currentCell.classList.add('has-photo');
-                currentCell.classList.add('active'); // 拍照完自動標記完成
-            };
-            reader.readAsDataURL(file);
-        }
-        cameraInput.value = ''; 
-    });
-
-    // 3. 核心功能：產生賓果盤
-    function createBoard(size = 4) {
-        const board = document.getElementById('board');
-        board.innerHTML = '';
-        
-        // 隨機打亂物件
-        const shuffled = items.sort(() => 0.5 - Math.random());
-
-        for (let i = 0; i < size * size; i++) {
-            const cell = document.createElement('div');
-            cell.className = 'cell';
+        function createBoard(size) {
+            gridSize = size;
+            const board = document.getElementById('board');
+            const svg = document.getElementById('line-canvas');
+            board.innerHTML = '';
+            svg.innerHTML = ''; // 清除舊的線
+            board.style.gridTemplateColumns = `repeat(${size}, 1fr)`;
             
-            // 中間格設定
-            if (i === Math.floor((size * size) / 2)) {
-                cell.innerHTML = "<span>⭐ 免費格</span>";
-                cell.classList.add('free-space', 'active');
-            } else {
-                // 建立文字標籤
-                const textSpan = document.createElement('span');
-                textSpan.innerText = shuffled[i % items.length];
-                textSpan.style.pointerEvents = "none"; // 讓點擊直接穿透文字到格子上
-                
-                // 建立拍照按鈕
-                const camBtn = document.createElement('button');
-                camBtn.className = 'cam-btn';
-                camBtn.innerText = '📷';
-                
-                // 點擊整個格子：切換完成狀態
-                cell.onclick = function() {
-                    this.classList.toggle('active');
-                };
+            const shuffled = items.sort(() => 0.5 - Math.random());
 
-                // 點擊相機按鈕：開啟相機 (不觸發格子的 toggle)
-                camBtn.onclick = function(event) {
-                    event.stopPropagation(); // 阻止事件傳給 cell.onclick
-                    currentCell = cell; 
-                    cameraInput.click(); 
-                };
+            for (let i = 0; i < size * size; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'cell';
+                cell.dataset.index = i;
+                
+                if (i === Math.floor((size * size) / 2)) {
+                    cell.innerHTML = "<span>⭐</span>";
+                    cell.classList.add('active');
+                } else {
+                    const text = document.createElement('span');
+                    text.innerText = shuffled[i % items.length];
+                    text.style.pointerEvents = "none";
+                    
+                    const btn = document.createElement('button');
+                    btn.className = 'cam-btn'; btn.innerText = '📷';
+                    btn.onclick = (e) => { e.stopPropagation(); currentCell = cell; cameraInput.click(); };
 
-                cell.appendChild(textSpan);
-                cell.appendChild(camBtn);
+                    cell.appendChild(text);
+                    cell.appendChild(btn);
+                    cell.onclick = function() { 
+                        this.classList.toggle('active'); 
+                        checkBingo(); 
+                    };
+                }
+                board.appendChild(cell);
             }
-            board.appendChild(cell);
         }
-    }
 
-    function resetBoard() { createBoard(4); }
+        // --- 核心邏輯：檢查連線 ---
+        function checkBingo() {
+            const cells = document.querySelectorAll('.cell');
+            const activeIndices = Array.from(cells).map(c => c.classList.contains('active'));
+            const svg = document.getElementById('line-canvas');
+            svg.innerHTML = ''; // 重新計算所有連線
 
-    // 初始化 4*4 盤面
-    createBoard(4);
-</script>
+            const lines = [];
+            // 1. 檢查橫線
+            for (let i = 0; i < gridSize; i++) {
+                let row = [];
+                for (let j = 0; j < gridSize; j++) row.push(i * gridSize + j);
+                if (row.every(idx => activeIndices[idx])) lines.push(row);
+            }
+            // 2. 檢查直線
+            for (let i = 0; i < gridSize; i++) {
+                let col = [];
+                for (let j = 0; j < gridSize; j++) col.push(j * gridSize + i);
+                if (col.every(idx => activeIndices[idx])) lines.push(col);
+            }
+            // 3. 檢查斜對角
+            let diag1 = [], diag2 = [];
+            for (let i = 0; i < gridSize; i++) {
+                diag1.push(i * gridSize + i);
+                diag2.push(i * gridSize + (gridSize - 1 - i));
+            }
+            if (diag1.every(idx => activeIndices[idx])) lines.push(diag1);
+            if (diag2.every(idx => activeIndices[idx])) lines.push(diag2);
+
+            // 畫出所有連線
+            lines.forEach(line => drawSvgLine(line));
+        }
+
+        function drawSvgLine(indices) {
+            const svg = document.getElementById('line-canvas');
+            const cells = document.querySelectorAll('.cell');
+            const startCell = cells[indices[0]];
+            const endCell = cells[indices[indices.length - 1]];
+
+            const x1 = startCell.offsetLeft + startCell.offsetWidth / 2;
+            const y1 = startCell.offsetTop + startCell.offsetHeight / 2;
+            const x2 = endCell.offsetLeft + endCell.offsetWidth / 2;
+            const y2 = endCell.offsetTop + endCell.offsetHeight / 2;
+
+            const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+            line.setAttribute("x1", x1); line.setAttribute("y1", y1);
+            line.setAttribute("x2", x2); line.setAttribute("y2", y2);
+            line.setAttribute("class", "bingo-line");
+            svg.appendChild(line);
+        }
+
+        cameraInput.onchange = (e) => {
+            const file = e.target.files[0];
+            if (file && currentCell) {
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    currentCell.style.backgroundImage = `linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.3)), url(${ev.target.result})`;
+                    currentCell.classList.add('has-photo', 'active');
+                    checkBingo();
+                };
+                reader.readAsDataURL(file);
+            }
+        };
+
+        function resetBoard() { createBoard(4); }
+        createBoard(4);
+    </script>
 </body>
 </html>
