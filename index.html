@@ -3,17 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>散步賓果 - 連線版</title>
+    <title>散步賓果 - 5x5 經典版</title>
     <style>
         :root { --primary: #333; --active: #ffdf00; --line: #ff4757; }
         body { font-family: sans-serif; text-align: center; background: #f4f4f4; padding: 20px; margin: 0; }
         
-        .container { position: relative; max-width: 400px; margin: 20px auto; }
+        .container { position: relative; max-width: 500px; margin: 20px auto; }
 
         .bingo-board {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 10px;
+            /* 強制設定為 5 欄 */
+            grid-template-columns: repeat(5, 1fr); 
+            gap: 8px;
             background: white;
             padding: 10px;
             border: 3px solid var(--primary);
@@ -24,78 +25,84 @@
         .cell {
             aspect-ratio: 1;
             background: #fff;
-            border: 1px solid #ddd;
+            border: 1px solid #eee;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
-            font-size: 14px; cursor: pointer; position: relative; overflow: hidden;
+            font-size: 12px; cursor: pointer; position: relative; overflow: hidden;
             background-size: cover; background-position: center; transition: 0.3s;
         }
         
         .cell.active { background-color: var(--active); font-weight: bold; }
         .cell.has-photo { color: white; text-shadow: 1px 1px 3px rgba(0,0,0,0.8); }
 
-        /* SVG 連線畫布：疊在格子上層 */
         #line-canvas {
             position: absolute;
             top: 0; left: 0;
             width: 100%; height: 100%;
-            pointer-events: none; /* 讓線不要擋住點擊 */
+            pointer-events: none;
             z-index: 10;
         }
 
         .bingo-line {
             stroke: var(--line);
-            stroke-width: 8;
+            stroke-width: 6;
             stroke-linecap: round;
             stroke-dasharray: 1000;
             stroke-dashoffset: 1000;
             animation: drawLine 0.5s ease forwards;
-            opacity: 0.7;
+            opacity: 0.8;
         }
 
         @keyframes drawLine { to { stroke-dashoffset: 0; } }
 
-        .cam-btn { margin-top: 5px; font-size: 18px; background: rgba(255,255,255,0.8); border: none; border-radius: 4px; padding: 2px 5px; cursor: pointer; }
+        .cam-btn { margin-top: 4px; font-size: 14px; background: rgba(255,255,255,0.8); border: none; border-radius: 4px; padding: 2px; cursor: pointer; }
     </style>
 </head>
 <body>
 
-    <h1>🚶‍♂️ 散步賓果</h1>
+    <h1>🚶‍♂️ 散步賓果 (5x5)</h1>
     <div class="container">
         <div class="bingo-board" id="board"></div>
-        <!-- 用來畫連線的畫布 -->
         <svg id="line-canvas"></svg>
     </div>
 
-    <button onclick="resetBoard()" style="padding: 10px 20px;">重新洗牌</button>
+    <button onclick="resetBoard()" style="padding: 10px 20px; font-weight: bold;">重新洗牌</button>
     <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display: none;">
 
     <script>
-        const items = ["郵筒", "貓", "狗", "沒戴安全帽阿伯", "外送員", "變電箱", "紅線違停", "建案廣告", "大榕樹", "垃圾車", "土地公廟", "飲料店", "免費格", "鐵捲門", "三角錐", "小發財車"];
-        let gridSize = 4;
+        // 擴充至 24 個以上的物件，確保 5x5 不重複
+        const items = [
+            "郵筒", "貓", "狗", "沒戴安全帽阿伯", "外送員", "變電箱", "紅線違停", "建案廣告", 
+            "大榕樹", "垃圾車", "土地公廟", "飲料店", "鐵捲門", "三角錐", "小發財車", "夾娃娃機店",
+            "路邊晾衣服", "改裝排氣管", "YouBike", "舉牌建案員", "手搖飲塑膠袋", "擋泥板女神", "遮雨棚", "藍白拖"
+        ];
+
+        let gridSize = 5; // 固定為 5
         let currentCell = null;
         const cameraInput = document.getElementById('cameraInput');
 
-        function createBoard(size) {
-            gridSize = size;
+        function createBoard() {
             const board = document.getElementById('board');
             const svg = document.getElementById('line-canvas');
             board.innerHTML = '';
-            svg.innerHTML = ''; // 清除舊的線
-            board.style.gridTemplateColumns = `repeat(${size}, 1fr)`;
+            svg.innerHTML = ''; 
             
-            const shuffled = items.sort(() => 0.5 - Math.random());
+            // 隨機打亂
+            const shuffled = [...items].sort(() => 0.5 - Math.random());
+            const centerIndex = Math.floor((gridSize * gridSize) / 2); // 25格的話就是 12
 
-            for (let i = 0; i < size * size; i++) {
+            for (let i = 0; i < gridSize * gridSize; i++) {
                 const cell = document.createElement('div');
                 cell.className = 'cell';
-                cell.dataset.index = i;
                 
-                if (i === Math.floor((size * size) / 2)) {
-                    cell.innerHTML = "<span>⭐</span>";
+                // 檢查是否為正中心格
+                if (i === centerIndex) {
+                    cell.innerHTML = "<span style='font-size:20px'>⭐</span><small>FREE</small>";
                     cell.classList.add('active');
+                    cell.style.backgroundColor = "#eee";
                 } else {
                     const text = document.createElement('span');
-                    text.innerText = shuffled[i % items.length];
+                    // 從打亂的陣列拿東西，跳過中心格所以用 i 的偏移量
+                    text.innerText = shuffled[i > centerIndex ? i-1 : i] || "加蓋違建"; 
                     text.style.pointerEvents = "none";
                     
                     const btn = document.createElement('button');
@@ -113,27 +120,27 @@
             }
         }
 
-        // --- 核心邏輯：檢查連線 ---
+        // --- 連線檢查邏輯 (維持動態判斷) ---
         function checkBingo() {
             const cells = document.querySelectorAll('.cell');
             const activeIndices = Array.from(cells).map(c => c.classList.contains('active'));
             const svg = document.getElementById('line-canvas');
-            svg.innerHTML = ''; // 重新計算所有連線
+            svg.innerHTML = ''; 
 
             const lines = [];
-            // 1. 檢查橫線
+            // 橫線
             for (let i = 0; i < gridSize; i++) {
                 let row = [];
                 for (let j = 0; j < gridSize; j++) row.push(i * gridSize + j);
                 if (row.every(idx => activeIndices[idx])) lines.push(row);
             }
-            // 2. 檢查直線
+            // 直線
             for (let i = 0; i < gridSize; i++) {
                 let col = [];
                 for (let j = 0; j < gridSize; j++) col.push(j * gridSize + i);
                 if (col.every(idx => activeIndices[idx])) lines.push(col);
             }
-            // 3. 檢查斜對角
+            // 斜線
             let diag1 = [], diag2 = [];
             for (let i = 0; i < gridSize; i++) {
                 diag1.push(i * gridSize + i);
@@ -142,7 +149,6 @@
             if (diag1.every(idx => activeIndices[idx])) lines.push(diag1);
             if (diag2.every(idx => activeIndices[idx])) lines.push(diag2);
 
-            // 畫出所有連線
             lines.forEach(line => drawSvgLine(line));
         }
 
@@ -177,8 +183,8 @@
             }
         };
 
-        function resetBoard() { createBoard(4); }
-        createBoard(4);
+        function resetBoard() { createBoard(); }
+        createBoard();
     </script>
 </body>
 </html>
