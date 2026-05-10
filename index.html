@@ -2,22 +2,36 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>散步賓果 - 5x5 經典版</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>散步賓果 - 滿版大格子版</title>
     <style>
-        :root { --primary: #333; --active: #ffdf00; --line: #ff4757; }
-        body { font-family: sans-serif; text-align: center; background: #f4f4f4; padding: 20px; margin: 0; }
+        :root { --primary: #222; --active: #ffdf00; --line: #ff4757; }
         
-        .container { position: relative; max-width: 500px; margin: 20px auto; }
+        /* 1. 移除外層空白，讓空間利用率達到 100% */
+        body { 
+            font-family: sans-serif; 
+            text-align: center; 
+            background: #fff; 
+            margin: 0; 
+            padding: 0; 
+            overflow-x: hidden; 
+        }
+        
+        h1 { font-size: 1.2rem; margin: 10px 0; color: var(--primary); }
+
+        .container { 
+            position: relative; 
+            width: 100vw; /* 滿版寬度 */
+            max-width: 500px; /* 電腦版不至於太大 */
+            margin: 0 auto; 
+        }
 
         .bingo-board {
             display: grid;
-            /* 強制設定為 5 欄 */
-            grid-template-columns: repeat(5, 1fr); 
-            gap: 8px;
-            background: white;
-            padding: 10px;
-            border: 3px solid var(--primary);
+            grid-template-columns: repeat(5, 1fr);
+            gap: 2px; /* 極小間距 */
+            background: var(--primary); /* 用背景色當作格線 */
+            padding: 2px;
             position: relative;
             z-index: 1;
         }
@@ -25,14 +39,37 @@
         .cell {
             aspect-ratio: 1;
             background: #fff;
-            border: 1px solid #eee;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            font-size: 12px; cursor: pointer; position: relative; overflow: hidden;
-            background-size: cover; background-position: center; transition: 0.3s;
+            display: flex; 
+            align-items: center; 
+            justify-content: center;
+            font-size: 11px; /* 稍微縮小字體確保不折行 */
+            font-weight: bold;
+            cursor: pointer; 
+            position: relative; 
+            overflow: hidden;
+            background-size: cover; 
+            background-position: center;
+            padding: 2px;
+            line-height: 1.2;
+            word-break: break-all;
         }
         
-        .cell.active { background-color: var(--active); font-weight: bold; }
-        .cell.has-photo { color: white; text-shadow: 1px 1px 3px rgba(0,0,0,0.8); }
+        .cell.active { background-color: var(--active); }
+        .cell.has-photo { color: white; text-shadow: 1px 1px 3px #000; }
+
+        /* 2. 相機按鈕改到角落，不佔用中心文字空間 */
+        .cam-btn { 
+            position: absolute;
+            bottom: 2px;
+            right: 2px;
+            font-size: 14px; 
+            background: rgba(255,255,255,0.9); 
+            border: 1px solid #ccc;
+            border-radius: 3px; 
+            padding: 2px; 
+            z-index: 5;
+            line-height: 1;
+        }
 
         #line-canvas {
             position: absolute;
@@ -44,39 +81,46 @@
 
         .bingo-line {
             stroke: var(--line);
-            stroke-width: 6;
+            stroke-width: 5;
             stroke-linecap: round;
-            stroke-dasharray: 1000;
-            stroke-dashoffset: 1000;
-            animation: drawLine 0.5s ease forwards;
             opacity: 0.8;
+            filter: drop-shadow(0 0 2px rgba(0,0,0,0.3));
         }
 
-        @keyframes drawLine { to { stroke-dashoffset: 0; } }
-
-        .cam-btn { margin-top: 4px; font-size: 14px; background: rgba(255,255,255,0.8); border: none; border-radius: 4px; padding: 2px; cursor: pointer; }
+        .controls { padding: 15px; }
+        button { 
+            background: var(--primary); 
+            color: white; 
+            border: none; 
+            padding: 10px 20px; 
+            border-radius: 25px; 
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
 
-    <h1>🚶‍♂️ 散步賓果 (5x5)</h1>
+    <h1>🚶‍♂️ 散步賓果</h1>
+    
     <div class="container">
         <div class="bingo-board" id="board"></div>
         <svg id="line-canvas"></svg>
     </div>
 
-    <button onclick="resetBoard()" style="padding: 10px 20px; font-weight: bold;">重新洗牌</button>
+    <div class="controls">
+        <button onclick="resetBoard()">重新洗牌 / 切換模式</button>
+    </div>
+
     <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display: none;">
 
     <script>
-        // 擴充至 24 個以上的物件，確保 5x5 不重複
         const items = [
-            "郵筒", "貓", "狗", "沒戴安全帽阿伯", "外送員", "變電箱", "紅線違停", "建案廣告", 
-            "大榕樹", "垃圾車", "土地公廟", "飲料店", "鐵捲門", "三角錐", "小發財車", "夾娃娃機店",
-            "路邊晾衣服", "改裝排氣管", "YouBike", "舉牌建案員", "手搖飲塑膠袋", "擋泥板女神", "遮雨棚", "藍白拖"
+            "郵筒", "野貓", "小狗", "未戴安全帽", "外送員", "變電箱", "紅線違停", "建案廣告", 
+            "大榕樹", "垃圾車", "土地公廟", "飲料店", "鐵捲門", "三角錐", "發財車", "夾娃娃機",
+            "晾衣服", "改裝車", "YouBike", "舉牌員", "手搖飲", "擋泥板", "遮雨棚", "藍白拖"
         ];
 
-        let gridSize = 5; // 固定為 5
+        let gridSize = 5;
         let currentCell = null;
         const cameraInput = document.getElementById('cameraInput');
 
@@ -86,23 +130,19 @@
             board.innerHTML = '';
             svg.innerHTML = ''; 
             
-            // 隨機打亂
             const shuffled = [...items].sort(() => 0.5 - Math.random());
-            const centerIndex = Math.floor((gridSize * gridSize) / 2); // 25格的話就是 12
+            const centerIndex = 12; 
 
-            for (let i = 0; i < gridSize * gridSize; i++) {
+            for (let i = 0; i < 25; i++) {
                 const cell = document.createElement('div');
                 cell.className = 'cell';
                 
-                // 檢查是否為正中心格
                 if (i === centerIndex) {
-                    cell.innerHTML = "<span style='font-size:20px'>⭐</span><small>FREE</small>";
+                    cell.innerHTML = "<span style='font-size:20px'>⭐</span>";
                     cell.classList.add('active');
-                    cell.style.backgroundColor = "#eee";
                 } else {
                     const text = document.createElement('span');
-                    // 從打亂的陣列拿東西，跳過中心格所以用 i 的偏移量
-                    text.innerText = shuffled[i > centerIndex ? i-1 : i] || "加蓋違建"; 
+                    text.innerText = shuffled[i > centerIndex ? i-1 : i];
                     text.style.pointerEvents = "none";
                     
                     const btn = document.createElement('button');
@@ -120,7 +160,6 @@
             }
         }
 
-        // --- 連線檢查邏輯 (維持動態判斷) ---
         function checkBingo() {
             const cells = document.querySelectorAll('.cell');
             const activeIndices = Array.from(cells).map(c => c.classList.contains('active'));
@@ -128,26 +167,18 @@
             svg.innerHTML = ''; 
 
             const lines = [];
-            // 橫線
-            for (let i = 0; i < gridSize; i++) {
-                let row = [];
-                for (let j = 0; j < gridSize; j++) row.push(i * gridSize + j);
+            for (let i = 0; i < 5; i++) {
+                let row = [], col = [];
+                for (let j = 0; j < 5; j++) {
+                    row.push(i * 5 + j);
+                    col.push(j * 5 + i);
+                }
                 if (row.every(idx => activeIndices[idx])) lines.push(row);
-            }
-            // 直線
-            for (let i = 0; i < gridSize; i++) {
-                let col = [];
-                for (let j = 0; j < gridSize; j++) col.push(j * gridSize + i);
                 if (col.every(idx => activeIndices[idx])) lines.push(col);
             }
-            // 斜線
-            let diag1 = [], diag2 = [];
-            for (let i = 0; i < gridSize; i++) {
-                diag1.push(i * gridSize + i);
-                diag2.push(i * gridSize + (gridSize - 1 - i));
-            }
-            if (diag1.every(idx => activeIndices[idx])) lines.push(diag1);
-            if (diag2.every(idx => activeIndices[idx])) lines.push(diag2);
+            let d1 = [0,6,12,18,24], d2 = [4,8,12,16,20];
+            if (d1.every(idx => activeIndices[idx])) lines.push(d1);
+            if (d2.every(idx => activeIndices[idx])) lines.push(d2);
 
             lines.forEach(line => drawSvgLine(line));
         }
@@ -155,19 +186,14 @@
         function drawSvgLine(indices) {
             const svg = document.getElementById('line-canvas');
             const cells = document.querySelectorAll('.cell');
-            const startCell = cells[indices[0]];
-            const endCell = cells[indices[indices.length - 1]];
-
-            const x1 = startCell.offsetLeft + startCell.offsetWidth / 2;
-            const y1 = startCell.offsetTop + startCell.offsetHeight / 2;
-            const x2 = endCell.offsetLeft + endCell.offsetWidth / 2;
-            const y2 = endCell.offsetTop + endCell.offsetHeight / 2;
-
-            const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
-            line.setAttribute("x1", x1); line.setAttribute("y1", y1);
-            line.setAttribute("x2", x2); line.setAttribute("y2", y2);
-            line.setAttribute("class", "bingo-line");
-            svg.appendChild(line);
+            const s = cells[indices[0]], e = cells[indices[indices.length-1]];
+            const l = document.createElementNS("http://www.w3.org/2000/svg", "line");
+            l.setAttribute("x1", s.offsetLeft + s.offsetWidth/2);
+            l.setAttribute("y1", s.offsetTop + s.offsetHeight/2);
+            l.setAttribute("x2", e.offsetLeft + e.offsetWidth/2);
+            l.setAttribute("y2", e.offsetTop + e.offsetHeight/2);
+            l.setAttribute("class", "bingo-line");
+            svg.appendChild(l);
         }
 
         cameraInput.onchange = (e) => {
@@ -175,7 +201,7 @@
             if (file && currentCell) {
                 const reader = new FileReader();
                 reader.onload = (ev) => {
-                    currentCell.style.backgroundImage = `linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.3)), url(${ev.target.result})`;
+                    currentCell.style.backgroundImage = `linear-gradient(rgba(0,0,0,0.2), rgba(0,0,0,0.2)), url(${ev.target.result})`;
                     currentCell.classList.add('has-photo', 'active');
                     checkBingo();
                 };
