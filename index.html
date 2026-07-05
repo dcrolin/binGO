@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>彰化賓果工業區！</title>
+    <title>彰化賓果工業區</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root { 
@@ -11,7 +11,7 @@
             --primary-orange: #DB4A07; /* 磚泰紅 / 朱紅 */
             --active-yellow: #FFEAA7; /* 可愛手繪黃 */
             --line-green: #00B894; /* 復古青綠連線 */
-            --text-dark: #333333; /* 質感深炭灰 */
+            --text-dark: #444444; /* 質感深炭灰 */
         }
         
         body { 
@@ -62,7 +62,7 @@
             max-width: 460px; 
             margin: 0 auto; 
             background: var(--primary-orange);
-            padding: 3px; /* 4px 細大框 */
+            padding: 3px; /* 3px 細大框 */
             border-radius: 16px; 
             box-shadow: 0 6px 0px rgba(219, 74, 7, 0.2), 0 12px 24px rgba(0,0,0,0.08);
         }
@@ -212,4 +212,140 @@
     </div>
     
     <div class="container">
-        <div class="bingo
+        <div class="bingo-board" id="board"></div>
+        <svg id="line-canvas"></svg>
+    </div>
+
+    <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display: none;">
+
+    <script>
+        const items = [
+            { text: "鐵窗花", icon: "fa-border-all" },
+            { text: "紅磚牆", icon: "fa-cubes" },
+            { text: "平交道", icon: "fa-train-tram" },
+            { text: "吉祥物半半", icon: "fa-ghost" }, // 半半用可愛小神獸圖標代指
+            { text: "老屋", icon: "fa-house-chimney-window" },
+            { text: "碎玻璃圍牆", icon: "fa-burst" },
+            { text: "騎樓燕子窩", icon: "fa-crow" },
+            { text: "手寫毛筆春聯", icon: "fa-pen-brush" },
+            { text: "防空洞指標", icon: "fa-person-shelter" },
+            { text: "宮廟石獅子", icon: "fa-cat" },
+            { text: "老字號香舖", icon: "fa-fire" },
+            { text: "「彰」", icon: "fa-font" }, // 代表中文字標誌
+            { text: "手寫體老招牌", icon: "fa-heading" },
+            { text: "古早味柑仔店", icon: "fa-shop" },
+            { text: "藍黃紅布告欄", icon: "fa-clipboard-list" },
+            { text: "小貓", icon: "fa-shield-cat" },
+            { text: "彰化客運", icon: "fa-bus" },
+            { text: "MOOVO單車", icon: "fa-bicycle" },
+            { text: "爌肉飯招牌", icon: "fa-bowl-rice" },
+            { text: "大佛", icon: "fa-gopuram" },
+            { text: "大排水溝", icon: "fa-water" },
+            { text: "海棠花玻璃", icon: "fa-snowflake" },
+            { text: "肉圓老店", icon: "fa-cookie" },
+            { text: "眷村", icon: "fa-tree-city" }
+        ];
+
+        let gridSize = 5;
+        let currentCell = null;
+        const cameraInput = document.getElementById('cameraInput');
+
+        function createBoard() {
+            const board = document.getElementById('board');
+            const svg = document.getElementById('line-canvas');
+            board.innerHTML = '';
+            svg.innerHTML = ''; 
+            
+            const shuffled = [...items].sort(() => 0.5 - Math.random());
+            const centerIndex = 12; 
+
+            for (let i = 0; i < 25; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'cell';
+                
+                if (i === centerIndex) {
+                    cell.innerHTML = "<span style='font-size:22px; margin-bottom:2px;'>🏮</span><span style='font-size:9px; font-weight:900; letter-spacing:1px;'>START</span>";
+                    cell.classList.add('active');
+                    cell.style.backgroundColor = "var(--active-yellow)";
+                } else {
+                    const itemData = shuffled[i > centerIndex ? i-1 : i];
+                    
+                    const iconEl = document.createElement('i');
+                    iconEl.className = `fa-solid ${itemData.icon} cell-icon`;
+                    
+                    const textSpan = document.createElement('span');
+                    textSpan.innerText = itemData.text;
+                    textSpan.style.pointerEvents = "none";
+                    
+                    const btn = document.createElement('button');
+                    btn.className = 'cam-btn'; 
+                    btn.innerHTML = '<i class="fa-solid fa-camera"></i>';
+                    btn.onclick = (e) => { e.stopPropagation(); currentCell = cell; cameraInput.click(); };
+
+                    cell.appendChild(iconEl);
+                    cell.appendChild(textSpan);
+                    cell.appendChild(btn);
+                    
+                    cell.onclick = function() { 
+                        this.classList.toggle('active'); 
+                        checkBingo(); 
+                    };
+                }
+                board.appendChild(cell);
+            }
+        }
+
+        function checkBingo() {
+            const cells = document.querySelectorAll('.cell');
+            const activeIndices = Array.from(cells).map(c => c.classList.contains('active'));
+            const svg = document.getElementById('line-canvas');
+            svg.innerHTML = ''; 
+
+            const lines = [];
+            for (let i = 0; i < 5; i++) {
+                let row = [], col = [];
+                for (let j = 0; j < 5; j++) {
+                    row.push(i * 5 + j);
+                    col.push(j * 5 + i);
+                }
+                if (row.every(idx => activeIndices[idx])) lines.push(row);
+                if (col.every(idx => activeIndices[idx])) lines.push(col);
+            }
+            let d1 = [0,6,12,18,24], d2 = [4,8,12,16,20];
+            if (d1.every(idx => activeIndices[idx])) lines.push(d1);
+            if (d2.every(idx => activeIndices[idx])) lines.push(d2);
+
+            lines.forEach(line => drawSvgLine(line));
+        }
+
+        function drawSvgLine(indices) {
+            const svg = document.getElementById('line-canvas');
+            const cells = document.querySelectorAll('.cell');
+            const s = cells[indices[0]], e = cells[indices[indices.length-1]];
+            const l = document.createElementNS("http://www.w3.org/2000/svg", "line");
+            l.setAttribute("x1", s.offsetLeft + s.offsetWidth/2);
+            l.setAttribute("y1", s.offsetTop + s.offsetHeight/2);
+            l.setAttribute("x2", e.offsetLeft + e.offsetWidth/2);
+            l.setAttribute("y2", e.offsetTop + e.offsetHeight/2);
+            l.setAttribute("class", "bingo-line");
+            svg.appendChild(l);
+        }
+
+        cameraInput.onchange = (e) => {
+            const file = e.target.files[0];
+            if (file && currentCell) {
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    currentCell.style.backgroundImage = `linear-gradient(rgba(0,0,0,0.35), rgba(0,0,0,0.35)), url(${ev.target.result})`;
+                    currentCell.classList.add('has-photo', 'active');
+                    checkBingo();
+                };
+                reader.readAsDataURL(file);
+            }
+        };
+
+        function resetBoard() { createBoard(); }
+        createBoard();
+    </script>
+</body>
+</html>
