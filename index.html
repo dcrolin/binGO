@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>彰化舊城散步賓果</title>
+    <title>彰化賓果工業區</title>
+    <!-- 引入外部可愛復古字體與圖標庫 (免費資源) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root { 
             --bg-creamy: #FDFBF7; /* 溫暖米白 */
@@ -24,41 +26,55 @@
         }
         
         /* 可愛復古風標題 */
+        .header-zone {
+            margin: 25px 0 15px 0;
+        }
         h1 { 
-            font-size: 1.5rem; 
-            margin: 20px 0 10px 0; 
+            font-size: 1.6rem; 
+            margin: 0;
             color: var(--primary-orange); 
             font-weight: 900;
             letter-spacing: 2px;
-            text-shadow: 1px 1px 0px var(--bg-creamy), 2px 2px 0px rgba(219, 74, 7, 0.2);
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+        }
+        h1 i {
+            font-size: 1.2rem;
+            animation: walk 1.5s ease-in-out infinite alternate;
+        }
+        @keyframes walk {
+            0% { transform: translateY(0) rotate(-5deg); }
+            100% { transform: translateY(-4px) rotate(5deg); }
         }
 
         .subtitle {
             font-size: 0.85rem;
-            margin-bottom: 20px;
+            margin-top: 6px;
             color: var(--text-dark);
             opacity: 0.8;
             font-weight: bold;
+            letter-spacing: 1px;
         }
 
         .container { 
             position: relative; 
-            width: 92vw; /* 稍微留一點邊緣，像卡片一樣可愛 */
+            width: 92vw; 
             max-width: 460px; 
             margin: 0 auto; 
             background: var(--primary-orange);
-            padding: 4px;
-            border-radius: 16px; /* 圓角可愛風 */
-            box-shadow: 0 8px 0px rgba(219, 74, 7, 0.15), 0 12px 24px rgba(0,0,0,0.08);
+            padding: 6px;
+            border-radius: 20px; 
+            box-shadow: 0 10px 0px rgba(219, 74, 7, 0.2), 0 15px 30px rgba(0,0,0,0.08);
         }
 
         /* 賓果盤 */
         .bingo-board { 
             display: grid; 
             grid-template-columns: repeat(5, 1fr); 
-            gap: 4px; 
+            gap: 5px; 
             background: var(--primary-orange); 
-            border-radius: 12px;
+            border-radius: 14px;
             overflow: hidden;
             position: relative;
             z-index: 1;
@@ -69,6 +85,7 @@
             aspect-ratio: 1; 
             background: var(--bg-creamy); 
             display: flex; 
+            flex-direction: column;
             align-items: center; 
             justify-content: center; 
             font-size: 10px; 
@@ -85,10 +102,20 @@
             transition: all 0.2s ease;
         }
         
-        /* 點選後的可愛黃色 */
+        /* 格子內的小小可愛圖標 */
+        .cell-icon {
+            font-size: 16px;
+            margin-bottom: 3px;
+            opacity: 0.9;
+        }
+        
+        /* 點選後的狀態 */
         .cell.active { 
             background-color: var(--active-yellow); 
             color: var(--text-dark);
+        }
+        .cell.active .cell-icon {
+            color: var(--primary-orange);
         }
         
         /* 有照片時的視覺優化 */
@@ -96,21 +123,23 @@
             color: white; 
             text-shadow: 1px 1px 4px rgba(0,0,0,0.9), 0px 0px 2px rgba(0,0,0,0.8); 
         }
+        .cell.has-photo .cell-icon { display: none; } /* 有照片就藏起小icon以免凌亂 */
         
         /* Corner 相機按鈕可愛化 */
         .cam-btn { 
             position: absolute; 
             bottom: 4px; 
             right: 4px; 
-            font-size: 12px; 
+            font-size: 11px; 
             background: var(--bg-creamy); 
             border: 1.5px solid var(--primary-orange); 
             border-radius: 6px; 
-            padding: 3px; 
+            padding: 4px; 
             z-index: 5; 
             line-height: 1;
+            color: var(--primary-orange);
             box-shadow: 1px 1px 0px var(--primary-orange);
-            transition: transform 0.1s;
+            transition: all 0.1s;
         }
         .cam-btn:active {
             transform: translate(1px, 1px);
@@ -118,6 +147,9 @@
         }
         .cell.active .cam-btn {
             background: var(--active-yellow);
+            color: var(--text-dark);
+            border-color: var(--text-dark);
+            box-shadow: 1px 1px 0px var(--text-dark);
         }
 
         /* SVG 連線畫布 */
@@ -132,7 +164,7 @@
         /* 復古青綠劃記筆連線 */
         .bingo-line { 
             stroke: var(--line-green); 
-            stroke-width: 6; 
+            stroke-width: 7; 
             stroke-linecap: round; 
             opacity: 0.85; 
             stroke-dasharray: 1000;
@@ -142,32 +174,37 @@
 
         @keyframes drawLine { to { stroke-dashoffset: 0; } }
 
-        .controls { padding: 25px; }
+        .controls { padding: 25px 15px; }
         
         /* 復古圓潤按鈕 */
         button.reset-btn { 
             background: var(--primary-orange); 
             color: var(--bg-creamy); 
             border: none; 
-            padding: 12px 28px; 
+            padding: 12px 32px; 
             border-radius: 30px; 
             font-weight: bold; 
-            font-size: 0.95rem;
+            font-size: 1rem;
             letter-spacing: 1px;
-            box-shadow: 0 4px 0px #9E3200;
+            box-shadow: 0 5px 0px #9E3200;
             cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
             transition: all 0.1s;
         }
         button.reset-btn:active {
-            transform: translateY(4px);
+            transform: translateY(5px);
             box-shadow: 0 0px 0px #9E3200;
         }
     </style>
 </head>
 <body>
 
-    <h1>彰化舊城散步賓果</h1>
-    <div class="subtitle">🚶‍♂️ 尋找街道上的老城故事 🚶‍♀️</div>
+    <div class="header-zone">
+        <h1><i class="fa-solid fa-shoe-prints"></i> 彰化賓果工業區 </h1>
+        <div class="subtitle">探索巷弄街道的常民工藝美學 🗺️</div>
+    </div>
     
     <div class="container">
         <div class="bingo-board" id="board"></div>
@@ -177,18 +214,32 @@
     <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display: none;">
 
     <script>
+        // 帶有相對應可愛內建小圖標(icon)的彰化物件庫
         const items = [
-             "鐵窗花", "紅磚牆", "平交道/鐵軌", "吉祥物半半", 
-
-            "老屋", "碎玻璃圍牆", "騎樓燕子窩", "手寫毛筆春聯", 
-
-            "防空洞指標", "宮廟石獅子", "老字號香舖", "「彰」",
-
-            "手寫體老招牌", "古早味柑仔店", "藍黃紅布告欄", "小貓",
-
-            "彰化客運", "MOOVO單車", "爌肉飯招牌", "大佛",
-
-            "大排水溝", "海棠花毛玻璃", "肉圓老店", "眷村" 
+            { text: "老屋鐵窗花", icon: "fa-border-all" },
+            { text: "斑駁紅磚牆", icon: "fa-cubes" },
+            { text: "磨石子地板", icon: "fa-border-top-left" },
+            { text: "老式木造拉門", icon: "fa-door-open" },
+            { text: "木造老屋", icon: "fa-house-chimney-window" },
+            { text: "碎玻璃圍牆", icon: "fa-burst" },
+            { text: "騎樓燕子窩", icon: "fa-crow" },
+            { text: "手寫毛筆春聯", icon: "fa-pen-brush" },
+            { text: "手繪防空洞", icon: "fa-person-shelter" },
+            { text: "宮廟石獅子", icon: "fa-cat" },
+            { text: "老字號香舖", icon: "fa-fire" },
+            { text: "路邊小神龕", icon: "fa-gopuram" },
+            { text: "手寫體老招牌", icon: "fa-heading" },
+            { text: "古早味柑仔店", icon: "fa-shop" },
+            { text: "擋泥板女神", icon: "fa-motorcycle" },
+            { text: "廟宇剪黏", icon: "fa-palette" },
+            { text: "彰化客運", icon: "fa-bus" },
+            { text: "MOOVO單車", icon: "fa-bicycle" },
+            { text: "爌肉飯招牌", icon: "fa-bowl-rice" },
+            { text: "大佛路標指示", icon: "fa-map-signs" },
+            { text: "古董裁縫車", icon: "fa-scissors" },
+            { text: "海棠花玻璃", icon: "fa-snowflake" },
+            { text: "彰化肉圓老店", icon: "fa-cookie" },
+            { text: "扇形車庫火車", icon: "fa-train" }
         ];
 
         let gridSize = 5;
@@ -209,20 +260,31 @@
                 cell.className = 'cell';
                 
                 if (i === centerIndex) {
-                    cell.innerHTML = "<span style='font-size:18px;'></span><br><span style='font-size:9px; opacity:0.8; margin-top:2px;'>抵達彰化！</span>";
+                    cell.innerHTML = "<span style='font-size:22px; margin-bottom:2px;'>抵達彰化</span><span style='font-size:9px; font-weight:900; letter-spacing:1px;'>START</span>";
                     cell.classList.add('active');
                     cell.style.backgroundColor = "var(--active-yellow)";
                 } else {
-                    const text = document.createElement('span');
-                    text.innerText = shuffled[i > centerIndex ? i-1 : i];
-                    text.style.pointerEvents = "none";
+                    const itemData = shuffled[i > centerIndex ? i-1 : i];
                     
+                    // 建立可愛圖標
+                    const iconEl = document.createElement('i');
+                    iconEl.className = `fa-solid ${itemData.icon} cell-icon`;
+                    
+                    // 建立文字
+                    const textSpan = document.createElement('span');
+                    textSpan.innerText = itemData.text;
+                    textSpan.style.pointerEvents = "none";
+                    
+                    // 建立相機按鈕
                     const btn = document.createElement('button');
-                    btn.className = 'cam-btn'; btn.innerText = '📷';
+                    btn.className = 'cam-btn'; 
+                    btn.innerHTML = '<i class="fa-solid fa-camera"></i>';
                     btn.onclick = (e) => { e.stopPropagation(); currentCell = cell; cameraInput.click(); };
 
-                    cell.appendChild(text);
+                    cell.appendChild(iconEl);
+                    cell.appendChild(textSpan);
                     cell.appendChild(btn);
+                    
                     cell.onclick = function() { 
                         this.classList.toggle('active'); 
                         checkBingo(); 
