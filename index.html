@@ -54,6 +54,18 @@
             pointer-events: none;
             z-index: 0;
         }
+
+        .bg-walk-icon {
+            position: absolute;
+            bottom: 120px;
+            left: -10px;
+            font-size: 95px;
+            color: var(--primary-orange);
+            opacity: 0.07; /* 淡淡的文青感 */
+            transform: rotate(-15deg); /* 隨機微旋轉 */
+            pointer-events: none;
+            z-index: 0;
+        }
         
         /* 可愛復古風標題 */
         .header-zone {
@@ -188,7 +200,11 @@
             border-color: var(--text-dark);
             box-shadow: 1px 1px 0px var(--text-dark);
         }
-        
+
+        .cell.center-free-space {
+            justify-content: center !important;
+            padding-bottom: 6px !important; /* 微調高度平衡 */
+        }
 
         /* SVG 連線畫布 */
         #line-canvas { 
@@ -296,9 +312,10 @@
                 const cell = document.createElement('div');
                 cell.className = 'cell';
                 
-                if (i === centerIndex) {
-                    cell.innerHTML = "<span style='font-size:12px; margin-bottom:6px;'>抵達✿彰化</span><span style='font-size:9px; font-weight:900; letter-spacing:1px;'>START</span>";
-                    cell.classList.add('active');
+            if (i === centerIndex) {
+                    cell.innerHTML = "<span style='font-size:12px; margin-bottom:4px;'>抵達✿彰化</span><span style='font-size:9px; font-weight:900; letter-spacing:1px;'>START</span>";
+                    /* ✨ 修正：這裡幫中間格補上 center-free-space 類別以啟動置中效果 ✨ */
+                    cell.classList.add('active', 'center-free-space');
                     cell.style.backgroundColor = "var(--active-yellow)";
                 } else {
                     const itemData = shuffled[i > centerIndex ? i-1 : i];
