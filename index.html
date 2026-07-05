@@ -23,6 +23,37 @@
             overflow-x: hidden;
             color: var(--text-dark);
         }
+
+/* ✨ ✨ ✨ 核心優化：在網頁空白處加入隨機旋轉的背景可愛大插圖 ✨ ✨ ✨ */
+        body::before {
+            content: "\f238"; /* Font Awesome 的火車頭圖標 */
+            font-family: "Font Awesome 6 Free";
+            font-weight: 900;
+            position: absolute;
+            top: 40px;
+            left: -15px;
+            font-size: 80px;
+            color: var(--primary-orange);
+            opacity: 0.06; /* 淡淡的半透明浮水印，不干擾閱讀 */
+            transform: rotate(-25deg); /* 隨機歪一邊 */
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        body::after {
+            content: "\f206"; /* Font Awesome 的腳踏車圖標 */
+            font-family: "Font Awesome 6 Free";
+            font-weight: 900;
+            position: absolute;
+            bottom: 80px;
+            right: -20px;
+            font-size: 110px;
+            color: var(--primary-orange);
+            opacity: 0.06;
+            transform: rotate(18deg); /* 隨機歪另一邊 */
+            pointer-events: none;
+            z-index: 0;
+        }
         
         /* 可愛復古風標題 */
         .header-zone {
